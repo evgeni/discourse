@@ -2832,4 +2832,57 @@ RSpec.describe User do
       expect(user.unseen_reviewable_count).to eq(0)
     end
   end
+
+  describe "#bump_last_seen_reviewable!" do
+    it "doesn't error if there are no reviewables" do
+      Reviewable.destroy_all
+      user.bump_last_seen_reviewable!
+      expect(user.last_seen_reviewable_id).to eq(nil)
+    end
+
+    it "picks the reviewable of the largest id" do
+      user.update!(admin: true)
+      r1 = Fabricate(
+        :reviewable,
+        created_at: 3.minutes.ago,
+        updated_at: 3.minutes.ago,
+        score: 100
+      )
+      r2 = Fabricate(
+        :reviewable,
+        created_at: 30.minutes.ago,
+        updated_at: 30.minutes.ago,
+        score: 10
+      )
+      user.bump_last_seen_reviewable!
+      expect(user.last_seen_reviewable_id).to eq(r2.id)
+    end
+
+    it "stays at the maximum reviewable if there are no new reviewables" do
+      user.update!(admin: true)
+      reviewable = Fabricate(:reviewable)
+      user.bump_last_seen_reviewable!
+      expect(user.last_seen_reviewable_id).to eq(reviewable.id)
+      user.bump_last_seen_reviewable!
+      expect(user.last_seen_reviewable_id).to eq(reviewable.id)
+    end
+
+    it "respects reviewables security" do
+      admin = Fabricate(:admin)
+      moderator = Fabricate(:moderator)
+      group = Fabricate(:group)
+      user.update!(groups: [group])
+      SiteSetting.enable_category_group_moderation = true
+
+      group_reviewable = Fabricate(:reviewable, reviewable_by_moderator: false, reviewable_by_group: group)
+      mod_reviewable = Fabricate(:reviewable, reviewable_by_moderator: true)
+      admin_reviewable = Fabricate(:reviewable, reviewable_by_moderator: false)
+
+      [admin, moderator, user].each(&:bump_last_seen_reviewable!)
+
+      expect(admin.last_seen_reviewable_id).to eq(admin_reviewable.id)
+      expect(moderator.last_seen_reviewable_id).to eq(mod_reviewable.id)
+      expect(user.last_seen_reviewable_id).to eq(group_reviewable.id)
+    end
+  end
 end

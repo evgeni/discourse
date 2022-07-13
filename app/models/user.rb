@@ -651,6 +651,24 @@ class User < ActiveRecord::Base
     end
   end
 
+  def bump_last_seen_reviewable!
+    max_reviewable_id = Reviewable
+      .unseen_list_for(self, preload: false, limit: 1)
+      .except(:order)
+      .order(id: :desc)
+      .pluck(:id)
+      .first
+
+    if max_reviewable_id && (!last_seen_reviewable_id || max_reviewable_id > last_seen_reviewable_id)
+      update!(last_seen_reviewable_id: max_reviewable_id)
+      MessageBus.publish(
+        "/reviewable_counts",
+        { unseen_reviewable_count: self.unseen_reviewable_count },
+        user_ids: [self.id]
+      )
+    end
+  end
+
   TRACK_FIRST_NOTIFICATION_READ_DURATION = 1.week.to_i
 
   def read_first_notification?
