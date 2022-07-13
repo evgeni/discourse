@@ -2012,6 +2012,25 @@ RSpec.describe User do
 
       expect(message).to eq(nil)
     end
+
+    context "with redesigned_user_menu_enabled on" do
+      it "adds all_unread_notifications and grouped_unread_high_priority_notifications to the payload" do
+        user.update!(admin: true)
+        user.enable_redesigned_user_menu
+        Fabricate(:notification, user: user)
+        Fabricate(:notification, notification_type: 15, high_priority: true, read: false, user: user)
+        messages = MessageBus.track_publish("/notification/#{user.id}") do
+          user.publish_notifications_state
+        end
+        expect(messages.size).to eq(1)
+
+        message = messages.first
+        expect(message.data[:all_unread_notifications]).to eq(2)
+        expect(message.data[:grouped_unread_high_priority_notifications]).to eq({ 15 => 1 })
+      ensure
+        user.disable_redesigned_user_menu
+      end
+    end
   end
 
   describe "silenced?" do
@@ -2733,6 +2752,84 @@ RSpec.describe User do
 
       expect(whisperer.whisperer?).to eq(true)
       expect(user.whisperer?).to eq(false)
+    end
+  end
+
+  describe "#grouped_unread_high_priority_notifications" do
+    it "returns a map of high priority types to their unread count" do
+      Fabricate(:notification, user: user, notification_type: 1, high_priority: true, read: true)
+      Fabricate(:notification, user: user, notification_type: 1, high_priority: true, read: false)
+      Fabricate(:notification, user: user, notification_type: 1, high_priority: false, read: true)
+      Fabricate(:notification, user: user, notification_type: 1, high_priority: false, read: false)
+
+      Fabricate(:notification, user: user, notification_type: 2, high_priority: true, read: false, topic: nil)
+
+      Fabricate(:notification, user: user, notification_type: 3, high_priority: true, read: false).tap do |n|
+        n.topic.trash!(Fabricate(:admin))
+      end
+
+      Fabricate(:notification, user: user, notification_type: 3, high_priority: false, read: true)
+
+      Fabricate(:notification, notification_type: 4, high_priority: true, read: false)
+
+      expect(user.grouped_unread_high_priority_notifications).to contain_exactly(
+        *{ 1 => 1, 2 => 1 }.to_a
+      )
+    end
+  end
+
+  describe "#all_unread_notifications" do
+    it "returns count of unseen and unread high priority and normal priority notifications" do
+      Fabricate(:notification, user: user, high_priority: true, read: false)
+      n2 = Fabricate(:notification, user: user, high_priority: false, read: false)
+      expect(user.all_unread_notifications).to eq(2)
+
+      n2.update!(read: true)
+      user.reload
+
+      expect(user.all_unread_notifications).to eq(1)
+
+      user.update!(seen_notification_id: n2.id)
+      user.reload
+
+      expect(user.all_unread_notifications).to eq(0)
+
+      n3 = Fabricate(:notification, user: user)
+      user.reload
+
+      expect(user.all_unread_notifications).to eq(1)
+
+      n3.topic.trash!(Fabricate(:admin))
+      user.reload
+
+      expect(user.all_unread_notifications).to eq(0)
+    end
+  end
+
+  describe "#unseen_reviewable_count" do
+    fab!(:admin_reviewable) { Fabricate(:reviewable, reviewable_by_moderator: false) }
+    fab!(:mod_reviewable) { Fabricate(:reviewable, reviewable_by_moderator: true) }
+    fab!(:group_reviewable) { Fabricate(:reviewable, reviewable_by_moderator: false, reviewable_by_group: group) }
+
+    it "doesn't include reviewables that can't be seen by the user" do
+      SiteSetting.enable_category_group_moderation = true
+      expect(user.unseen_reviewable_count).to eq(0)
+      user.groups << group
+      user.save!
+      expect(user.unseen_reviewable_count).to eq(1)
+      user.update!(moderator: true)
+      expect(user.unseen_reviewable_count).to eq(2)
+      user.update!(admin: true)
+      expect(user.unseen_reviewable_count).to eq(3)
+    end
+
+    it "returns count of unseen reviewables" do
+      user.update!(admin: true)
+      expect(user.unseen_reviewable_count).to eq(3)
+      user.update!(last_seen_reviewable_id: mod_reviewable.id)
+      expect(user.unseen_reviewable_count).to eq(1)
+      user.update!(last_seen_reviewable_id: group_reviewable.id)
+      expect(user.unseen_reviewable_count).to eq(0)
     end
   end
 end
