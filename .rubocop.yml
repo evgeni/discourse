@@ -7,3 +7,6 @@ Discourse/NoAddReferenceOrAliasesActiveRecordMigration:
 
 Discourse/NoResetColumnInformationInMigrations:
   Enabled: true
+
+RSpec/BeforeAfterAll:
+  Enabled: true
