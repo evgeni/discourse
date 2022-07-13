@@ -9,6 +9,8 @@ import I18n from "I18n";
 import { test } from "qunit";
 import pretender from "../helpers/create-pretender";
 
+// TODO: remove this file when redesigned_user_menu_enabled is removed
+
 acceptance("Dismiss notification confirmation", function (needs) {
   needs.user();
 
