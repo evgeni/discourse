@@ -1,11 +1,11 @@
-import componentTest, {
-  setupRenderingTest,
-} from "discourse/tests/helpers/component-test";
-import { discourseModule, query } from "discourse/tests/helpers/qunit-helpers";
+import { module, test } from "qunit";
+import { setupRenderingTest } from "discourse/tests/helpers/component-test";
+import { query } from "discourse/tests/helpers/qunit-helpers";
 import { deepMerge } from "discourse-common/lib/object";
+import { render } from "@ember/test-helpers";
 import { NOTIFICATION_TYPES } from "discourse/tests/fixtures/concerns/notification-types";
 import Notification from "discourse/models/notification";
-import hbs from "htmlbars-inline-precompile";
+import { hbs } from "ember-cli-htmlbars";
 
 function getNotification(overrides = {}) {
   return Notification.create(
@@ -36,51 +36,33 @@ function getNotification(overrides = {}) {
   );
 }
 
-discourseModule(
+module(
   "Integration | Component | user-menu | group-mentioned-notification-item",
   function (hooks) {
     setupRenderingTest(hooks);
 
     const template = hbs`<UserMenu::GroupMentionedNotificationItem @item={{this.notification}}/>`;
 
-    componentTest(
-      "notification label displays the user who mentioned and the mentioned group",
-      {
-        template,
+    test("notification label displays the user who mentioned and the mentioned group", async function (assert) {
+      this.set("notification", getNotification());
+      await render(template);
+      const label = query("li span");
+      assert.strictEqual(label.textContent.trim(), "osama @hikers");
+      assert.ok(
+        label.classList.contains("mention-group"),
+        "label has mention-group class"
+      );
+      assert.ok(label.classList.contains("notify"), "label has notify class");
+    });
 
-        beforeEach() {
-          this.set("notification", getNotification());
-        },
-
-        async test(assert) {
-          const label = query("li span");
-          assert.strictEqual(label.textContent.trim(), "osama @hikers");
-          assert.ok(
-            label.classList.contains("mention-group"),
-            "label has mention-group class"
-          );
-          assert.ok(
-            label.classList.contains("notify"),
-            "label has notify class"
-          );
-        },
-      }
-    );
-
-    componentTest("notification description displays the topic title", {
-      template,
-
-      beforeEach() {
-        this.set("notification", getNotification());
-      },
-
-      async test(assert) {
-        const description = query("li span:nth-of-type(2)");
-        assert.strictEqual(
-          description.textContent.trim(),
-          "This is fancy title <a>!"
-        );
-      },
+    test("notification description displays the topic title", async function (assert) {
+      this.set("notification", getNotification());
+      await render(template);
+      const description = query("li span:nth-of-type(2)");
+      assert.strictEqual(
+        description.textContent.trim(),
+        "This is fancy title <a>!"
+      );
     });
   }
 );

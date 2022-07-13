@@ -1,11 +1,11 @@
-import componentTest, {
-  setupRenderingTest,
-} from "discourse/tests/helpers/component-test";
-import { discourseModule, query } from "discourse/tests/helpers/qunit-helpers";
+import { module, test } from "qunit";
+import { setupRenderingTest } from "discourse/tests/helpers/component-test";
+import { query } from "discourse/tests/helpers/qunit-helpers";
+import { render } from "@ember/test-helpers";
 import { deepMerge } from "discourse-common/lib/object";
 import { NOTIFICATION_TYPES } from "discourse/tests/fixtures/concerns/notification-types";
 import Notification from "discourse/models/notification";
-import hbs from "htmlbars-inline-precompile";
+import { hbs } from "ember-cli-htmlbars";
 import I18n from "I18n";
 
 function getNotification(overrides = {}) {
@@ -33,60 +33,39 @@ function getNotification(overrides = {}) {
   );
 }
 
-discourseModule(
+module(
   "Integration | Component | user-menu | liked-consolidated-notification-item",
   function (hooks) {
     setupRenderingTest(hooks);
 
     const template = hbs`<UserMenu::LikedConsolidatedNotificationItem @item={{this.notification}}/>`;
 
-    componentTest(
-      "the notification links to the likes received notifications page of the user",
-      {
-        template,
-
-        beforeEach() {
-          this.set("notification", getNotification());
-        },
-
-        async test(assert) {
-          const link = query("li a");
-          assert.ok(
-            link.href.endsWith(
-              "/u/eviltrout/notifications/likes-received?acting_username=liker439"
-            )
-          );
-        },
-      }
-    );
-
-    componentTest("the notification label displays the user who liked", {
-      template,
-
-      beforeEach() {
-        this.set("notification", getNotification());
-      },
-
-      async test(assert) {
-        const label = query("li span");
-        assert.strictEqual(label.textContent.trim(), "liker439");
-      },
+    test("the notification links to the likes received notifications page of the user", async function (assert) {
+      this.set("notification", getNotification());
+      await render(template);
+      const link = query("li a");
+      assert.ok(
+        link.href.endsWith(
+          "/u/eviltrout/notifications/likes-received?acting_username=liker439"
+        )
+      );
     });
 
-    componentTest("the notification description displays the number of likes", {
-      template,
+    test("the notification label displays the user who liked", async function (assert) {
+      this.set("notification", getNotification());
+      await render(template);
+      const label = query("li span");
+      assert.strictEqual(label.textContent.trim(), "liker439");
+    });
 
-      beforeEach() {
-        this.set("notification", getNotification());
-      },
-
-      async test(assert) {
-        const description = query("li span:nth-of-type(2)");
-        assert.strictEqual(
-          description.textContent.trim(),
-          I18n.t("notifications.liked_consolidated_description", { count: 44 })
-        );
-      },
+    test("the notification description displays the number of likes", async function (assert) {
+      this.set("notification", getNotification());
+      await render(template);
+      const description = query("li span:nth-of-type(2)");
+      assert.strictEqual(
+        description.textContent.trim(),
+        I18n.t("notifications.liked_consolidated_description", { count: 44 })
+      );
     });
   }
 );

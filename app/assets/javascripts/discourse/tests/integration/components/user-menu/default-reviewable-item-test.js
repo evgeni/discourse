@@ -1,14 +1,9 @@
-import componentTest, {
-  setupRenderingTest,
-} from "discourse/tests/helpers/component-test";
-import {
-  discourseModule,
-  exists,
-  query,
-  queryAll,
-} from "discourse/tests/helpers/qunit-helpers";
+import { module, test } from "qunit";
+import { setupRenderingTest } from "discourse/tests/helpers/component-test";
+import { exists, query, queryAll } from "discourse/tests/helpers/qunit-helpers";
 import { MiniReviewable } from "discourse/models/reviewable";
-import hbs from "htmlbars-inline-precompile";
+import { render } from "@ember/test-helpers";
+import { hbs } from "ember-cli-htmlbars";
 import I18n from "I18n";
 
 function getReviewable(overrides = {}) {
@@ -27,93 +22,60 @@ function getReviewable(overrides = {}) {
   );
 }
 
-discourseModule(
+module(
   "Integration | Component | user-menu | default-reviewable-item",
   function (hooks) {
     setupRenderingTest(hooks);
 
     const template = hbs`<UserMenu::DefaultReviewableItem @item={{this.item}}/>`;
 
-    componentTest(
-      "doesn't push `reviewed` to the classList if the reviewable is pending",
-      {
-        template,
-
-        beforeEach() {
-          this.set("item", getReviewable({ pending: true }));
-        },
-
-        async test(assert) {
-          assert.ok(!exists("li.reviewed"));
-          assert.ok(exists("li"));
-        },
-      }
-    );
-
-    componentTest(
-      "pushes `reviewed` to the classList if the reviewable isn't pending",
-      {
-        template,
-
-        beforeEach() {
-          this.set("item", getReviewable({ pending: false }));
-        },
-
-        async test(assert) {
-          assert.ok(exists("li.reviewed"));
-        },
-      }
-    );
-
-    componentTest("has 2 spans: one for label and one for description", {
-      template,
-
-      beforeEach() {
-        this.set("item", getReviewable());
-      },
-
-      async test(assert) {
-        const spans = queryAll("li span");
-        assert.strictEqual(spans.length, 2);
-
-        assert.strictEqual(
-          spans[0].textContent.trim(),
-          "sayo2",
-          "the label contains flagger_username"
-        );
-
-        assert.strictEqual(
-          spans[0].textContent.trim(),
-          "sayo2",
-          "the label is the flagger_username"
-        );
-        assert.strictEqual(
-          spans[1].textContent.trim(),
-          I18n.t("user_menu.reviewable.default_item", {
-            reviewable_id: this.item.id,
-          }),
-          "the description is a generic I18n string"
-        );
-      },
+    test("doesn't push `reviewed` to the classList if the reviewable is pending", async function (assert) {
+      this.set("item", getReviewable({ pending: true }));
+      await render(template);
+      assert.ok(!exists("li.reviewed"));
+      assert.ok(exists("li"));
     });
 
-    componentTest(
-      "the item's label is an I18n string if flagger_username is absent",
-      {
-        template,
+    test("pushes `reviewed` to the classList if the reviewable isn't pending", async function (assert) {
+      this.set("item", getReviewable({ pending: false }));
+      await render(template);
+      assert.ok(exists("li.reviewed"));
+    });
 
-        beforeEach() {
-          this.set("item", getReviewable({ flagger_username: null }));
-        },
+    test("has 2 spans: one for label and one for description", async function (assert) {
+      this.set("item", getReviewable());
+      await render(template);
+      const spans = queryAll("li span");
+      assert.strictEqual(spans.length, 2);
 
-        async test(assert) {
-          const label = query("li span");
-          assert.strictEqual(
-            label.textContent.trim(),
-            I18n.t("user_menu.reviewable.deleted_user")
-          );
-        },
-      }
-    );
+      assert.strictEqual(
+        spans[0].textContent.trim(),
+        "sayo2",
+        "the label contains flagger_username"
+      );
+
+      assert.strictEqual(
+        spans[0].textContent.trim(),
+        "sayo2",
+        "the label is the flagger_username"
+      );
+      assert.strictEqual(
+        spans[1].textContent.trim(),
+        I18n.t("user_menu.reviewable.default_item", {
+          reviewable_id: this.item.id,
+        }),
+        "the description is a generic I18n string"
+      );
+    });
+
+    test("the item's label is an I18n string if flagger_username is absent", async function (assert) {
+      this.set("item", getReviewable({ flagger_username: null }));
+      await render(template);
+      const label = query("li span");
+      assert.strictEqual(
+        label.textContent.trim(),
+        I18n.t("user_menu.reviewable.deleted_user")
+      );
+    });
   }
 );

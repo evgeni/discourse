@@ -1,15 +1,11 @@
-import componentTest, {
-  setupRenderingTest,
-} from "discourse/tests/helpers/component-test";
-import {
-  discourseModule,
-  exists,
-  query,
-} from "discourse/tests/helpers/qunit-helpers";
+import { module, test } from "qunit";
+import { setupRenderingTest } from "discourse/tests/helpers/component-test";
+import { exists, query } from "discourse/tests/helpers/qunit-helpers";
 import { deepMerge } from "discourse-common/lib/object";
 import { NOTIFICATION_TYPES } from "discourse/tests/fixtures/concerns/notification-types";
+import { render } from "@ember/test-helpers";
 import Notification from "discourse/models/notification";
-import hbs from "htmlbars-inline-precompile";
+import { hbs } from "ember-cli-htmlbars";
 import I18n from "I18n";
 
 function getNotification(overrides = {}) {
@@ -35,48 +31,33 @@ function getNotification(overrides = {}) {
   );
 }
 
-discourseModule(
+module(
   "Integration | Component | user-menu | granted-badge-notification-item",
   function (hooks) {
     setupRenderingTest(hooks);
 
     const template = hbs`<UserMenu::GrantedBadgeNotificationItem @item={{this.notification}}/>`;
 
-    componentTest("links to the badge page and filters by the username", {
-      template,
-
-      beforeEach() {
-        this.set("notification", getNotification());
-      },
-
-      async test(assert) {
-        const link = query("li a");
-        assert.ok(link.href.endsWith("/badges/12/tough-guy?username=ossa"));
-      },
+    test("links to the badge page and filters by the username", async function (assert) {
+      this.set("notification", getNotification());
+      await render(template);
+      const link = query("li a");
+      assert.ok(link.href.endsWith("/badges/12/tough-guy?username=ossa"));
     });
 
-    componentTest(
-      "the label is not wrapped by a span and there's no description",
-      {
-        template,
-
-        beforeEach() {
-          this.set("notification", getNotification());
-        },
-
-        async test(assert) {
-          const div = query("li div");
-          assert.strictEqual(
-            div.textContent.trim(),
-            I18n.t("notifications.granted_badge", {
-              description: "Tough Guy <a>",
-            }),
-            "label is rendered safely"
-          );
-          assert.ok(!exists("li span"));
-          assert.strictEqual(div.childElementCount, 0);
-        },
-      }
-    );
+    test("the label is not wrapped by a span and there's no description", async function (assert) {
+      this.set("notification", getNotification());
+      await render(template);
+      const div = query("li div");
+      assert.strictEqual(
+        div.textContent.trim(),
+        I18n.t("notifications.granted_badge", {
+          description: "Tough Guy <a>",
+        }),
+        "label is rendered safely"
+      );
+      assert.ok(!exists("li span"));
+      assert.strictEqual(div.childElementCount, 0);
+    });
   }
 );

@@ -1,17 +1,11 @@
-import componentTest, {
-  setupRenderingTest,
-} from "discourse/tests/helpers/component-test";
-import {
-  discourseModule,
-  exists,
-  query,
-  queryAll,
-} from "discourse/tests/helpers/qunit-helpers";
-import { click } from "@ember/test-helpers";
+import { module, test } from "qunit";
+import { setupRenderingTest } from "discourse/tests/helpers/component-test";
+import { exists, query, queryAll } from "discourse/tests/helpers/qunit-helpers";
+import { click, render } from "@ember/test-helpers";
 import { cloneJSON } from "discourse-common/lib/object";
 import { withPluginApi } from "discourse/lib/plugin-api";
 import NotificationFixtures from "discourse/tests/fixtures/notification-fixtures";
-import hbs from "htmlbars-inline-precompile";
+import { hbs } from "ember-cli-htmlbars";
 import pretender from "discourse/tests/helpers/create-pretender";
 import I18n from "I18n";
 
@@ -19,7 +13,7 @@ function getNotificationsData() {
   return cloneJSON(NotificationFixtures["/notifications"].notifications);
 }
 
-discourseModule(
+module(
   "Integration | Component | user-menu | notifications-list",
   function (hooks) {
     setupRenderingTest(hooks);
@@ -54,151 +48,100 @@ discourseModule(
 
     const template = hbs`<UserMenu::NotificationsList/>`;
 
-    componentTest("empty state when there are no notifications", {
-      template,
-
-      beforeEach() {
-        notificationsData.clear();
-      },
-
-      async test(assert) {
-        assert.ok(exists(".empty-state .empty-state-title"));
-        assert.ok(exists(".empty-state .empty-state-body"));
-      },
+    test("empty state when there are no notifications", async function (assert) {
+      notificationsData.clear();
+      await render(template);
+      assert.ok(exists(".empty-state .empty-state-title"));
+      assert.ok(exists(".empty-state .empty-state-body"));
     });
 
-    componentTest(
-      "doesn't set filter_by_types in the params of the request that fetches the notifications",
-      {
-        template,
+    test("doesn't set filter_by_types in the params of the request that fetches the notifications", async function (assert) {
+      await render(template);
+      assert.strictEqual(
+        queryParams.filter_by_types,
+        undefined,
+        "filter_by_types param is absent"
+      );
+    });
 
-        async test(assert) {
-          assert.strictEqual(
-            queryParams.filter_by_types,
-            undefined,
-            "filter_by_types param is absent"
-          );
-        },
-      }
-    );
+    test("displays a show all button that takes to the notifications page of the current user", async function (assert) {
+      await render(template);
+      const showAllBtn = query(".panel-body-bottom .btn.show-all");
+      assert.ok(
+        showAllBtn.href.endsWith("/u/eviltrout/notifications"),
+        "it takes you to the notifications page"
+      );
+      assert.strictEqual(
+        showAllBtn.getAttribute("title"),
+        I18n.t("user_menu.view_all_notifications"),
+        "title attribute is present"
+      );
+    });
 
-    componentTest(
-      "displays a show all button that takes to the notifications page of the current user",
-      {
-        template,
+    test("has a dismiss button if some notifications are not read", async function (assert) {
+      notificationsData.forEach((notification) => {
+        notification.read = true;
+      });
+      notificationsData[0].read = false;
+      await render(template);
+      const dismissButton = query(
+        ".panel-body-bottom .btn.notifications-dismiss"
+      );
+      assert.strictEqual(
+        dismissButton.textContent.trim(),
+        I18n.t("user.dismiss"),
+        "dismiss button has a label"
+      );
+      assert.strictEqual(
+        dismissButton.getAttribute("title"),
+        I18n.t("user.dismiss_notifications_tooltip"),
+        "dismiss button has title attribute"
+      );
+    });
 
-        async test(assert) {
-          const showAllBtn = query(".panel-body-bottom .btn.show-all");
-          assert.ok(
-            showAllBtn.href.endsWith("/u/eviltrout/notifications"),
-            "it takes you to the notifications page"
-          );
-          assert.strictEqual(
-            showAllBtn.getAttribute("title"),
-            I18n.t("user_menu.view_all_notifications"),
-            "title attribute is present"
-          );
-        },
-      }
-    );
+    test("doesn't have a dismiss button if all notifications are read", async function (assert) {
+      notificationsData.forEach((notification) => {
+        notification.read = true;
+      });
+      await render(template);
+      assert.ok(!exists(".panel-body-bottom .btn.notifications-dismiss"));
+    });
 
-    componentTest("has a dismiss button if some notifications are not read", {
-      template,
+    test("dismiss button makes a request to the server and then refreshes the notifications list", async function (assert) {
+      await render(template);
+      notificationsData = getNotificationsData();
+      notificationsData.forEach((notification) => {
+        notification.read = true;
+      });
+      assert.strictEqual(notificationsFetches, 1);
+      await click(".panel-body-bottom .btn.notifications-dismiss");
+      assert.ok(markRead, "request to the server is made");
+      assert.strictEqual(
+        notificationsFetches,
+        2,
+        "notifications list is refreshed"
+      );
+      assert.ok(
+        !exists(".panel-body-bottom .btn.notifications-dismiss"),
+        "dismiss button is now removed"
+      );
+    });
 
-      beforeEach() {
-        notificationsData.forEach((notification) => {
-          notification.read = true;
+    test("executes callbacks registered via the plugin API for modifying fetched notifications", async function (assert) {
+      withPluginApi("0.1", (api) => {
+        api.addUserMenuNotificationsProcessor((notifications) => {
+          notifications.forEach((notification, index) => {
+            notification.set("data.topic_title", `customized title ${index}`);
+          });
         });
-        notificationsData[0].read = false;
-      },
-
-      async test(assert) {
-        const dismissButton = query(
-          ".panel-body-bottom .btn.notifications-dismiss"
-        );
-        assert.strictEqual(
-          dismissButton.textContent.trim(),
-          I18n.t("user.dismiss"),
-          "dismiss button has a label"
-        );
-        assert.strictEqual(
-          dismissButton.getAttribute("title"),
-          I18n.t("user.dismiss_notifications_tooltip"),
-          "dismiss button has title attribute"
-        );
-      },
+      });
+      await render(template);
+      const notifications = queryAll("ul li.edited");
+      assert.strictEqual(
+        notifications[0].textContent.trim().replaceAll(/\s+/g, " "),
+        "velesin customized title 0",
+        "modifications made by the plugin API are applied"
+      );
     });
-
-    componentTest(
-      "doesn't have a dismiss button if all notifications are read",
-      {
-        template,
-
-        beforeEach() {
-          notificationsData.forEach((notification) => {
-            notification.read = true;
-          });
-        },
-
-        async test(assert) {
-          assert.ok(!exists(".panel-body-bottom .btn.notifications-dismiss"));
-        },
-      }
-    );
-
-    componentTest(
-      "dismiss button makes a request to the server and then refreshes the notifications list",
-      {
-        template,
-
-        async test(assert) {
-          notificationsData = getNotificationsData();
-          notificationsData.forEach((notification) => {
-            notification.read = true;
-          });
-          assert.strictEqual(notificationsFetches, 1);
-          await click(".panel-body-bottom .btn.notifications-dismiss");
-          assert.ok(markRead, "request to the server is made");
-          assert.strictEqual(
-            notificationsFetches,
-            2,
-            "notifications list is refreshed"
-          );
-          assert.ok(
-            !exists(".panel-body-bottom .btn.notifications-dismiss"),
-            "dismiss button is now removed"
-          );
-        },
-      }
-    );
-
-    componentTest(
-      "executes callbacks registered via the plugin API for modifying fetched notifications",
-      {
-        template,
-
-        beforeEach() {
-          withPluginApi("0.1", (api) => {
-            api.addUserMenuNotificationsProcessor((notifications) => {
-              notifications.forEach((notification, index) => {
-                notification.set(
-                  "data.topic_title",
-                  `customized title ${index}`
-                );
-              });
-            });
-          });
-        },
-
-        async test(assert) {
-          const notifications = queryAll("ul li.edited");
-          assert.strictEqual(
-            notifications[0].textContent.trim().replaceAll(/\s+/g, " "),
-            "velesin customized title 0",
-            "modifications made by the plugin API are applied"
-          );
-        },
-      }
-    );
   }
 );

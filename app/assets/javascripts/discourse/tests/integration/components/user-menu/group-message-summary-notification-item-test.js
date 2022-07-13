@@ -1,15 +1,11 @@
-import componentTest, {
-  setupRenderingTest,
-} from "discourse/tests/helpers/component-test";
-import {
-  discourseModule,
-  exists,
-  query,
-} from "discourse/tests/helpers/qunit-helpers";
+import { module, test } from "qunit";
+import { setupRenderingTest } from "discourse/tests/helpers/component-test";
+import { exists, query } from "discourse/tests/helpers/qunit-helpers";
+import { render } from "@ember/test-helpers";
 import { deepMerge } from "discourse-common/lib/object";
 import { NOTIFICATION_TYPES } from "discourse/tests/fixtures/concerns/notification-types";
 import Notification from "discourse/models/notification";
-import hbs from "htmlbars-inline-precompile";
+import { hbs } from "ember-cli-htmlbars";
 import I18n from "I18n";
 
 function getNotification(overrides = {}) {
@@ -34,31 +30,25 @@ function getNotification(overrides = {}) {
   );
 }
 
-discourseModule(
+module(
   "Integration | Component | user-menu | group-message-summary-notification-item",
   function (hooks) {
     setupRenderingTest(hooks);
 
     const template = hbs`<UserMenu::GroupMessageSummaryNotificationItem @item={{this.notification}}/>`;
 
-    componentTest("the notification displays a simple i18n string", {
-      template,
-
-      beforeEach() {
-        this.set("notification", getNotification());
-      },
-
-      async test(assert) {
-        const notification = query("li");
-        assert.strictEqual(
-          notification.textContent.trim(),
-          I18n.t("notifications.group_message_summary", {
-            count: 13,
-            group_name: "drummers",
-          })
-        );
-        assert.ok(!exists("li span"));
-      },
+    test("the notification displays a simple i18n string", async function (assert) {
+      this.set("notification", getNotification());
+      await render(template);
+      const notification = query("li");
+      assert.strictEqual(
+        notification.textContent.trim(),
+        I18n.t("notifications.group_message_summary", {
+          count: 13,
+          group_name: "drummers",
+        })
+      );
+      assert.ok(!exists("li span"));
     });
   }
 );
