@@ -31,7 +31,7 @@ class Jobs::NotifyReviewable < ::Jobs::Base
       counts[r.reviewable_by_group_id] += 1 if r.reviewable_by_group_id
     end
 
-    redesigned_menu_ids = User.redesigned_menu_ids
+    redesigned_menu_ids = User.redesigned_user_menu_enabled_user_ids
 
     new_menu_admins = User.real.admins.where(id: redesigned_menu_ids)
     notify_users(new_menu_admins, all_updates[:admins])
