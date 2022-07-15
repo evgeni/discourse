@@ -1,7 +1,6 @@
 import GlimmerComponent from "discourse/components/glimmer";
 import { bind } from "discourse-common/utils/decorators";
 createWidget("timeline-scrollarea", {
-  tagName: "div.timeline-scrollarea",
   buildKey: (attrs) => `timeline-scrollarea-${attrs.topic.id}`,
 
   buildAttributes() {

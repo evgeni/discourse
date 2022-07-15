@@ -1,5 +1,6 @@
 <DSection
   @class={{concat "topic-timeline timeline-container " this.class}}
+  @notificationLevel={{@model.details.notification_level}}
   @prevEvent={{@info.prevEvent}}
   @enteredIndex={{this.enteredIndex}}
   @loading={{@model.postStream.loading}}
@@ -7,7 +8,9 @@
   @jumpTop={{this.jumpTop}}
   @jumpBottom={{this.jumpBottom}}
   @jumpEnd={{this.jumpEnd}}
+  @jumpToPostPrompt={{this.jumpToPostPrompt}}
   @jumpToIndex={{this.jumpToIndex}}
+  @replyToPost={{this.replyToPost}}
   @toggleMultiSelect={{this.toggleMultiSelect}}
   @showTopicSlowModeUpdate={{fn (route-action "showTopicSlowModeUpdate") null null}}
   @deleteTopic={{this.deleteTopic}}
@@ -26,18 +29,14 @@
   @dockAt={{@dockAt}}
   @dockBottom={{@dockBottom}}
 >
-
   {{#if (and (not @info.topicProgressExpanded) this.currentUser)}}
     <TopicAdminMenuButton @topic={{@model}} @addKeyboardTargetClass={{true}} />
   {{/if}}
-
   <TopicTimeline::FooterControls
     @currentUser={{this.currentUser}}
     @fullscreen={{@info.topicProgressExpanded}}
     @topic={{@model}}
     @notificationLevel={{@model.details.notification_level}}
-    @replyToPost={{@replyToPost}}
-    @showSummary={{@showSummary}}
-    @jumpToPostPrompt={{@jumpToPostPrompt}}
+    @showSummary={{this.showSummary}}
   />
 </DSection>

@@ -1,7 +1,6 @@
 import GlimmerComponent from "discourse/components/glimmer";
 import { bind } from "discourse-common/utils/decorators";
 createWidget("timeline-last-read", {
-  tagName: "div.timeline-last-read",
 
   buildAttributes(attrs) {
     const bottom = scrollareaHeight() - LAST_READ_HEIGHT / 2;

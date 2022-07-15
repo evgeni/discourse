@@ -1,7 +1,6 @@
 import GlimmerComponent from "discourse/components/glimmer";
 import { bind } from "discourse-common/utils/decorators";
 createWidget("timeline-scroller", {
-  tagName: "div.timeline-scroller",
   buildKey: (attrs) => `timeline-scroller-${attrs.topicId}`,
 
   defaultState() {
