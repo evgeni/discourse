@@ -18,11 +18,6 @@ import { relativeAge } from "discourse/lib/formatter";
 import renderTags from "discourse/lib/render-tags";
 import renderTopicFeaturedLink from "discourse/lib/render-topic-featured-link";
 
-const SCROLLER_HEIGHT = 50;
-const LAST_READ_HEIGHT = 20;
-const MIN_SCROLLAREA_HEIGHT = 170;
-const MAX_SCROLLAREA_HEIGHT = 300;
-
 export default class TopicTimeline extends GlimmerComponent {
   @tracked prevEvent;
 
@@ -59,33 +54,6 @@ export default class TopicTimeline extends GlimmerComponent {
 
   get addShowClass() {
     this.args.fullscreen && !this.args.addShowClass ? true : false;
-  }
-
-  @bind
-  scrollareaHeight() {
-    const composerHeight =
-        document.getElementById("reply-control").offsetHeight || 0,
-      headerHeight =
-        document.querySelectorAll(".d-header")[0].offsetHeight || 0;
-
-    // scrollarea takes up about half of the timeline's height
-    const availableHeight =
-      (window.innerHeight - composerHeight - headerHeight) / 2;
-
-    return Math.max(
-      MIN_SCROLLAREA_HEIGHT,
-      Math.min(availableHeight, MAX_SCROLLAREA_HEIGHT)
-    );
-  }
-
-  @bind
-  scrollareaRemaining() {
-    return scrollareaHeight() - SCROLLER_HEIGHT;
-  }
-
-  @bind
-  clamp(p, min = 0.0, max = 1.0) {
-    return Math.max(Math.min(p, max), min);
   }
 
   @bind

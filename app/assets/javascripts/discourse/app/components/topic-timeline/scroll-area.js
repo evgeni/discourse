@@ -1,18 +1,16 @@
 import GlimmerComponent from "discourse/components/glimmer";
 import { bind } from "discourse-common/utils/decorators";
-createWidget("timeline-scrollarea", {
-  buildKey: (attrs) => `timeline-scrollarea-${attrs.topic.id}`,
 
-  buildAttributes() {
-    return { style: `height: ${scrollareaHeight()}px` };
-  },
+const SCROLLER_HEIGHT = 50;
+const LAST_READ_HEIGHT = 20;
+const MIN_SCROLLAREA_HEIGHT = 170;
+const MAX_SCROLLAREA_HEIGHT = 300;
 
-  defaultState(attrs) {
-    return {
-      percentage: this._percentFor(attrs.topic, attrs.enteredIndex + 1),
-      scrolledPost: 1,
-    };
-  },
+export default class TopicTimelineScrollarea extends GlimmerComponent {
+  buildKey = `timeline-scrollarea-${this.args.topic.id}`;
+  style = `height: ${this.scrollareaHeight()}px`;
+  percentage = this._percentFor(this.args.topic, this.args.enteredIndex + 1);
+  scrolledPost = 1;
 
   position() {
     const { attrs } = this;
@@ -21,8 +19,9 @@ createWidget("timeline-scrollarea", {
     const postStream = topic.get("postStream");
     const total = postStream.get("filteredPostsCount");
 
-    const scrollPosition = clamp(Math.floor(total * percentage), 0, total) + 1;
-    const current = clamp(scrollPosition, 1, total);
+    const scrollPosition =
+      this.clamp(Math.floor(total * percentage), 0, total) + 1;
+    const current = this.clamp(scrollPosition, 1, total);
 
     const daysAgo = postStream.closestDaysAgoFor(current);
     let date;
@@ -66,7 +65,7 @@ createWidget("timeline-scrollarea", {
     }
 
     return result;
-  },
+  }
 
   html(attrs, state) {
     const position = this.position();
@@ -77,8 +76,8 @@ createWidget("timeline-scrollarea", {
       return;
     }
 
-    const before = scrollareaRemaining() * percentage;
-    const after = scrollareaHeight() - before - SCROLLER_HEIGHT;
+    const before = this.scrollareaRemaining() * percentage;
+    const after = this.scrollareaHeight() - before - SCROLLER_HEIGHT;
 
     let showButton = false;
     const hasBackPosition =
@@ -91,7 +90,7 @@ createWidget("timeline-scrollarea", {
 
     if (hasBackPosition) {
       const lastReadTop = Math.round(
-        position.lastReadPercentage * scrollareaHeight()
+        position.lastReadPercentage * this.scrollareaHeight()
       );
       showButton =
         before + SCROLLER_HEIGHT - 5 < lastReadTop || before > lastReadTop + 25;
@@ -111,7 +110,7 @@ createWidget("timeline-scrollarea", {
 
     if (hasBackPosition) {
       const lastReadTop = Math.round(
-        position.lastReadPercentage * scrollareaHeight()
+        position.lastReadPercentage * this.scrollareaHeight()
       );
       result.push(
         this.attach("timeline-last-read", {
@@ -123,16 +122,16 @@ createWidget("timeline-scrollarea", {
     }
 
     return result;
-  },
+  }
 
   updatePercentage(y) {
     const $area = $(".timeline-scrollarea");
     const areaTop = $area.offset().top;
 
-    const percentage = clamp(parseFloat(y - areaTop) / $area.height());
+    const percentage = this.clamp(parseFloat(y - areaTop) / $area.height());
 
     this.state.percentage = percentage;
-  },
+  }
 
   commit() {
     const position = this.position();
@@ -143,18 +142,42 @@ createWidget("timeline-scrollarea", {
     } else {
       this.sendWidgetAction("jumpEnd");
     }
-  },
+  }
 
   topicCurrentPostScrolled(event) {
     this.state.percentage = event.percent;
-  },
+  }
 
   _percentFor(topic, postIndex) {
     const total = topic.get("postStream.filteredPostsCount");
-    return clamp(parseFloat(postIndex - 1.0) / total);
-  },
+    return this.clamp(parseFloat(postIndex - 1.0) / total);
+  }
 
   goBack() {
     this.sendWidgetAction("jumpToIndex", this.position().lastRead);
-  },
-});
+  }
+
+  clamp(p, min = 0.0, max = 1.0) {
+    return Math.max(Math.min(p, max), min);
+  }
+
+  scrollareaRemaining() {
+    return this.scrollareaHeight() - SCROLLER_HEIGHT;
+  }
+
+  scrollareaHeight() {
+    const composerHeight =
+        document.getElementById("reply-control").offsetHeight || 0,
+      headerHeight =
+        document.querySelectorAll(".d-header")[0].offsetHeight || 0;
+
+    // scrollarea takes up about half of the timeline's height
+    const availableHeight =
+      (window.innerHeight - composerHeight - headerHeight) / 2;
+
+    return Math.max(
+      MIN_SCROLLAREA_HEIGHT,
+      Math.min(availableHeight, MAX_SCROLLAREA_HEIGHT)
+    );
+  }
+}

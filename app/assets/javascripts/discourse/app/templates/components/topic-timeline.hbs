@@ -1,7 +1,6 @@
 <DSection
   @class={{concat "topic-timeline timeline-container " this.class}}
   @prevEvent={{@info.prevEvent}}
-  @enteredIndex={{this.enteredIndex}}
   @loading={{@model.postStream.loading}}
   @jumpToPost={{this.jumpToPost}}
   @jumpTop={{this.jumpTop}}
@@ -30,6 +29,11 @@
   {{#if (and (not @info.topicProgressExpanded) this.currentUser)}}
     <TopicAdminMenuButton @topic={{@model}} @addKeyboardTargetClass={{true}} />
   {{/if}}
+
+  <TopicTimeline::ScrollArea
+    @topic={{@model}}
+    @enteredIndex={{@model.enteredIndex}}
+  />
 
   <TopicTimeline::FooterControls
     @currentUser={{this.currentUser}}
