@@ -13,9 +13,8 @@ export default class TopicTimelineScrollarea extends GlimmerComponent {
   scrolledPost = 1;
 
   position() {
-    const { attrs } = this;
-    const percentage = this.state.percentage;
-    const topic = attrs.topic;
+    const percentage = this.args.percentage;
+    const topic = this.args.topic;
     const postStream = topic.get("postStream");
     const total = postStream.get("filteredPostsCount");
 
@@ -61,6 +60,7 @@ export default class TopicTimelineScrollarea extends GlimmerComponent {
 
     if (this.state.position !== result.scrollPosition) {
       this.state.position = result.scrollPosition;
+      // we are going to need a function here to update value - maybe @tracked
       this.sendWidgetAction("updatePosition", current);
     }
 
